@@ -44,7 +44,7 @@ afghanistan_fortified %>% distinct(id) %>% write.csv("data/districts.csv", row.n
 
 ```
 
-``` {r,  fig.width = 5}
+``` {r,  fig.width = 7, fig.height = 5}
 cities <- data.frame("name" = c("Kabul", "Kandahar", "Herat", "Mazar-i-Sharif"), "long" = c(69.160652, 65.7372, 62.2040, 67.1180), "lat" = c(34.543896, 31.6289, 34.3529, 36.6926))
 
 add_k_to_map <- function(k_days) {
@@ -59,16 +59,18 @@ add_k_to_map <- function(k_days) {
   # plot the shaded map_districts
   afghanistan_fortified_days <- merge(afghanistan_fortified, map_districts, by="id")
   map <- ggplot(data = afghanistan_fortified_days, aes(x = long, y = lat, group = group))
-
-  #title <- paste("Displacement following the Battle of Kunduz")
-  subt <- paste("Number of impacted people who were in another district", k_days, "day(s) after the day of violence.")
   
   # create the legend, title, and caption for the map
+  subt <- paste("Number of impacted people who were in another district", k_days, "day(s) after the day of violence.")
   map <- map + geom_polygon(aes(fill=visits), color='grey', size=.1) + scale_fill_gradient(high = "#e34a33", low = "#ffffff", limits=c(0, 3698), guide = "colorbar")  + coord_fixed(1.3)
-  map <- map + labs(title = "Displacement following the Battle of Kunduz", subtitle=subt) + theme(plot.title = element_text(size=15, face="bold"))
+  map <- map + labs(title = "Displacement following the Battle of Kunduz", subtitle=subt) + theme(plot.title = element_text(size=20, face="bold"))
+  
+  
+  # make the Kunduz district (id: 1401) a separate color from the rest
+  map <- map + geom_polygon(data = afghanistan_fortified_days[which(afghanistan_fortified_days$id == 1401),], aes(fill=visits), color='black', size=.1, fill = "blue")
   
   # add the cities: Kabul, Kandahar, Herat, Mazar-i-Sharif
-  map <- map + geom_point(data=cities, aes(x = long, y = lat, group = name),col="black", size=1) + geom_text_repel(data=cities, segment.size =.2, aes(x = long, y = lat, label= name, group=name), fontface= "bold", size=3, color = "black", nudge_x = c(3, 2, -2, 1), nudge_y = c(0.25, -1, 0.5, 1))
+  map <- map + geom_point(data=cities, aes(x = long, y = lat, group = name),col="black", size=1) + geom_text_repel(data=cities, segment.size =.2, aes(x = long, y = lat, label= name, group=name), fontface= "bold", size=4, color = "black", nudge_x = c(3, 2, -2, 1), nudge_y = c(0.25, -1, 0.5, .8))
   
   map
 }
