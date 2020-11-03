@@ -1,0 +1,346 @@
+---
+title: "01 - Pattern of Violence Over 5 Years"
+output: html_notebook
+---
+
+```{r imports}
+library(ggplot2)
+library(patchwork)
+library(reshape2)
+library(tidyr)
+library(zoo)
+```
+
+```{r import_files}
+# files that are imported will be in the .RData 
+# remember to condense the data down when you do interactive visualizations to not slow down the machine
+
+```
+
+```{r calc_total_values}
+
+YEAR_LOW <- as.Date('2013-01-01',format='%Y-%m-%d')
+YEAR_HIGH <- as.Date("2017-12-31", format='%Y-%m-%d')
+
+
+# breakdown data to analyze the 5 years of interest
+df_conflicts_year_range = ged191[which(as.Date(ged191$date_start) >= YEAR_LOW & as.Date(ged191$date_end) <= YEAR_HIGH & ged191$country == "Afghanistan"),]
+#df_conflicts_year_range
+
+cat("Number of Events: ",ncol(df_conflicts_year_range))
+cat("\nNumber of Casualties: ",sum(df_conflicts_year_range$best))
+
+df_conflicts_year_range
+
+```
+
+``` {r fighting_seasons - general}
+
+
+dates_list <- as.Date(YEAR_LOW:YEAR_HIGH, origin="1970-01-01")
+
+
+#number of active events
+df_active_events_per_day <- data.frame(date=dates_list, active_events=0, casualties=0)
+df_active_events_per_day
+df_active_events_per_day[which(df_active_events_per_day$date == as.Date("2013-01-01")),]$active_events
+
+
+for (row in 1:nrow(df_conflicts_year_range)) {
+  conflict_dates <- as.Date(as.Date(df_conflicts_year_range[row, 'date_start']):as.Date(df_conflicts_year_range[row, 'date_end']), origin="1970-01-01")
+  days_of_conflict = length(conflict_dates)
+  
+  #print(conflict_dates)
+  
+  for (conflict_date in 1:length(conflict_dates)) { #as.Date(df$my_col / 60 / 60 / 24, origin = '1970-01-01')
+    # calculate number of active events on each day
+    df_active_events_per_day[which(df_active_events_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$active_events = df_active_events_per_day[which(df_active_events_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$active_events + 1
+  
+    
+    # calculate number of casualties per day and separate by each type
+    #type_of_violence = df_conflicts_year_range[row, 'type_of_violence']
+    casualties = df_conflicts_year_range[row, 'best']
+    df_active_events_per_day[which(df_active_events_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$casualties = df_active_events_per_day[which(df_active_events_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$casualties + casualties/days_of_conflict
+    # 
+    # if(type_of_violence == 1) {
+    #   df_active_events_per_day[which(df_active_events_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$state_casualties = df_active_events_per_day[which(df_active_events_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$state_casualties + casualties/days_of_conflict
+    # }
+    # else if (type_of_violence == 2) {
+    #   df_active_events_per_day[which(df_active_events_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$nonstate_casualties = df_active_events_per_day[which(df_active_events_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$nonstate_casualties + casualties/days_of_conflict
+    # }
+    # else {
+    #   df_active_events_per_day[which(df_active_events_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$onesided_casualties = df_active_events_per_day[which(df_active_events_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$onesided_casualties + casualties/days_of_conflict
+    # }
+  }
+}
+
+df_active_events_per_day
+
+#iterate_year <- YEAR_LOW
+#while(iterate_year < YEAR_HIGH) {
+  #print(iterate_year)
+  #super inefficient, a better method would be to create a bucket for every date and have it iterate through the data 
+  #to_add <- df_conflicts_year_range[which(as.Date(df_conflicts_year_range$date_start) <= iterate_year & as.Date(df_conflicts_year_range$date_end) >= iterate_year),]
+  #df_active_events_per_day <- rep(iterate_year, nrow(to_add))
+  
+  #iterate_year <- iterate_year + 1
+#}
+
+
+
+
+#fighting_over_time <- ggplot(df_conflicts_year_range, aes(x=))
+
+```
+
+
+``` {r}
+df_active_events_per_day
+
+events_over_time <- ggplot(df_active_events_per_day, aes(x=date, y=active_events)) +geom_point(size=.5)
+events_over_time
+
+casualties_over_time <- ggplot(df_active_events_per_day, aes(x=date, y=casualties)) + geom_point(size=.5)
+casualties_over_time
+```
+
+
+```{r}
+
+#number of active events
+df_state_casualties_per_day <- data.frame(date=dates_list, state_casualties=0, state_active_events=0)
+df_state_casualties_per_day
+
+
+for (row in 1:nrow(df_conflicts_year_range)) {
+  conflict_dates <- as.Date(as.Date(df_conflicts_year_range[row, 'date_start']):as.Date(df_conflicts_year_range[row, 'date_end']), origin="1970-01-01")
+  days_of_conflict = length(conflict_dates)
+  
+  # calculate number of casualties per day and separate by each type
+  type_of_violence = df_conflicts_year_range[row, 'type_of_violence']
+  casualties = df_conflicts_year_range[row, 'best']
+  
+  if(type_of_violence == 1) {
+    for (conflict_date in 1:length(conflict_dates)) {
+      df_state_casualties_per_day[which(df_state_casualties_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$state_casualties = df_state_casualties_per_day[which(df_state_casualties_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$state_casualties + casualties/days_of_conflict
+      
+      df_state_casualties_per_day[which(df_state_casualties_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$state_active_events = df_state_casualties_per_day[which(df_state_casualties_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$state_active_events + 1
+      
+    }
+  }
+}
+
+df_state_casualties_per_day
+
+```
+
+``` {r nonstate}
+df_nonstate_casualties_per_day <- data.frame(date=dates_list, nonstate_casualties=0, nonstate_active_events=0)
+df_nonstate_casualties_per_day
+
+
+for (row in 1:nrow(df_conflicts_year_range)) {
+  conflict_dates <- as.Date(as.Date(df_conflicts_year_range[row, 'date_start']):as.Date(df_conflicts_year_range[row, 'date_end']), origin="1970-01-01")
+  days_of_conflict = length(conflict_dates)
+  
+  # calculate number of casualties per day and separate by each type
+  type_of_violence = df_conflicts_year_range[row, 'type_of_violence']
+  casualties = df_conflicts_year_range[row, 'best']
+  
+  if(type_of_violence == 2) {
+    for (conflict_date in 1:length(conflict_dates)) {
+      df_nonstate_casualties_per_day[which(df_nonstate_casualties_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$nonstate_casualties = df_nonstate_casualties_per_day[which(df_nonstate_casualties_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$nonstate_casualties + casualties/days_of_conflict
+    
+      df_nonstate_casualties_per_day[which(df_nonstate_casualties_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$nonstate_active_events = df_nonstate_casualties_per_day[which(df_nonstate_casualties_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$nonstate_active_events + 1
+      
+    }
+  }
+}
+
+df_nonstate_casualties_per_day
+
+```
+
+
+``` {r}
+
+df_onesided_casualties_per_day <- data.frame(date=dates_list, onesided_casualties=0, onesided_active_events=0)
+df_onesided_casualties_per_day
+
+
+for (row in 1:nrow(df_conflicts_year_range)) {
+  conflict_dates <- as.Date(as.Date(df_conflicts_year_range[row, 'date_start']):as.Date(df_conflicts_year_range[row, 'date_end']), origin="1970-01-01")
+  days_of_conflict = length(conflict_dates)
+  
+  # calculate number of casualties per day and separate by each type
+  type_of_violence = df_conflicts_year_range[row, 'type_of_violence']
+  casualties = df_conflicts_year_range[row, 'best']
+  
+  if(type_of_violence == 3) {
+    for (conflict_date in 1:length(conflict_dates)) {
+      df_onesided_casualties_per_day[which(df_onesided_casualties_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$onesided_casualties = df_onesided_casualties_per_day[which(df_onesided_casualties_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$onesided_casualties + casualties/days_of_conflict
+    
+      df_onesided_casualties_per_day[which(df_onesided_casualties_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$onesided_active_events = df_onesided_casualties_per_day[which(df_onesided_casualties_per_day$date == as.Date(conflict_dates[conflict_date], origin="1970-01-01")),]$onesided_active_events + 1
+      
+    }
+  }
+}
+
+df_onesided_casualties_per_day
+```
+
+
+``` {r}
+
+events_over_time <- ggplot(df_active_events_per_day, aes(x=date, y=active_events)) +geom_point(size=.5) + geom_point(data=df_state_casualties_per_day, aes(x=date, y=state_active_events), size=.5, color="green", name="state events") + geom_point(data=df_nonstate_casualties_per_day, aes(x=date, y=nonstate_active_events), size=.5, color="blue", name="non-state events") + geom_point(data=df_onesided_casualties_per_day, aes(x=date, y=onesided_active_events), size=.5, color="red", name="one-sided events")
+events_over_time
+
+casualties_over_time <- ggplot(df_active_events_per_day, aes(x=date, y=casualties)) + geom_point(size=.5) + geom_point(data=df_state_casualties_per_day, aes(x=date, y=state_casualties), size=.5, color="green", name="state events") + geom_point(data=df_nonstate_casualties_per_day, aes(x=date, y=nonstate_casualties), size=.5, color="blue", name="non-state events") + geom_point(data=df_onesided_casualties_per_day, aes(x=date, y=onesided_casualties), size=.5, color="red", name="one-sided events")
+casualties_over_time
+
+cat("\nstate-based casualties", sum(df_state_casualties_per_day$state_casualties))
+cat("\nnonstate-based casualties", sum(df_nonstate_casualties_per_day$nonstate_casualties))
+cat("\nonesided-based casualties", sum(df_onesided_casualties_per_day$onesided_casualties))
+```
+
+
+
+``` {r}
+MONTH_LOW_HIGH <- format(seq(as.Date(paste0("2013-01","01"), "%Y-%m%d"), as.Date(paste0("2017-12","31"), "%Y-%m%d"), by="month"),"%Y-%m")
+df_casualties_per_month <- data.frame(date=MONTH_LOW_HIGH, monthly_casualties=0)
+
+for(month in 1:length(MONTH_LOW_HIGH)) {
+  #inefficicent btw, next time search thru the file and separate by month
+  sum_casualties = 0
+  for(row in 1:nrow(df_active_events_per_day)) {
+    if(as.Date(as.yearmon(MONTH_LOW_HIGH[month]))+30 >= df_active_events_per_day[row, 'date']) {
+      sum_casualties = sum_casualties+ df_active_events_per_day[row,'casualties']
+    }
+  }
+  df_casualties_per_month[which(df_casualties_per_month$date == MONTH_LOW_HIGH[month]),]$monthly_casualties = df_casualties_per_month[which(df_casualties_per_month$date == MONTH_LOW_HIGH[month]),]$monthly_casualties + sum_casualties
+  
+}
+
+df_casualties_per_month
+
+
+```
+
+``` {r rest of the sets}
+MONTH_LOW_HIGH <- format(seq(as.Date(paste0("2013-01","01"), "%Y-%m%d"), as.Date(paste0("2017-12","31"), "%Y-%m%d"), by="month"),"%Y-%m")
+#MONTH_LOW_HIGH
+df_casualties_per_month <- data.frame(date=MONTH_LOW_HIGH, monthly_casualties=0)
+
+month_index =1
+sum_casualties = 0
+for(row in 1:nrow(df_active_events_per_day)) {
+  #cat(MONTH_LOW_HIGH[month_index], sum_casualties, "\n")#as.Date(as.yearmon(MONTH_LOW_HIGH[month_index])))
+  if(df_active_events_per_day[row, 'date'] <= as.Date(as.yearmon(MONTH_LOW_HIGH[month_index]))+30) {
+    sum_casualties = sum_casualties + df_active_events_per_day[row,'casualties']
+  }
+  else {
+    df_casualties_per_month[which(df_casualties_per_month$date == MONTH_LOW_HIGH[month_index]),]$monthly_casualties = sum_casualties
+    sum_casualties = df_active_events_per_day[row,'casualties']
+    month_index = month_index + 1
+  }
+}
+
+df_casualties_per_month
+```
+
+``` {r}
+write.csv(df_casualties_per_month, "df_casualties_per_month")
+```
+
+
+``` {r type 1 violence}
+
+MONTH_LOW_HIGH <- format(seq(as.Date(paste0("2013-01","01"), "%Y-%m%d"), as.Date(paste0("2017-12","31"), "%Y-%m%d"), by="month"),"%Y-%m")
+#MONTH_LOW_HIGH
+df_state_casualties_per_month <- data.frame(date=MONTH_LOW_HIGH, monthly_state_casualties=0)
+
+month_index =1
+sum_casualties = 0
+for(row in 1:nrow(df_state_casualties_per_day)) {
+  if(df_state_casualties_per_day[row, 'date'] <= as.Date(as.yearmon(MONTH_LOW_HIGH[month_index]))+30) {
+    sum_casualties = sum_casualties + df_state_casualties_per_day[row,'state_casualties']
+  }
+  else {
+    df_state_casualties_per_month[which(df_state_casualties_per_month$date == MONTH_LOW_HIGH[month_index]),]$monthly_state_casualties = sum_casualties
+    sum_casualties = df_state_casualties_per_day[row,'state_casualties']
+    month_index = month_index + 1
+  }
+}
+
+df_state_casualties_per_month
+
+
+```
+
+
+``` {r type 2 violence}
+
+MONTH_LOW_HIGH <- format(seq(as.Date(paste0("2013-01","01"), "%Y-%m%d"), as.Date(paste0("2017-12","31"), "%Y-%m%d"), by="month"),"%Y-%m")
+#MONTH_LOW_HIGH
+df_nonstate_casualties_per_month <- data.frame(date=MONTH_LOW_HIGH, monthly_nonstate_casualties=0)
+
+month_index =1
+sum_casualties = 0
+for(row in 1:nrow(df_nonstate_casualties_per_day)) {
+  if(df_nonstate_casualties_per_day[row, 'date'] <= as.Date(as.yearmon(MONTH_LOW_HIGH[month_index]))+30) {
+    sum_casualties = sum_casualties + df_nonstate_casualties_per_day[row,'nonstate_casualties']
+  }
+  else {
+    df_nonstate_casualties_per_month[which(df_nonstate_casualties_per_month$date == MONTH_LOW_HIGH[month_index]),]$monthly_nonstate_casualties = sum_casualties
+    sum_casualties = df_nonstate_casualties_per_day[row,'nonstate_casualties']
+    month_index = month_index + 1
+  }
+}
+
+df_nonstate_casualties_per_month
+
+``` 
+
+``` {r type 3 violence}
+
+MONTH_LOW_HIGH <- format(seq(as.Date(paste0("2013-01","01"), "%Y-%m%d"), as.Date(paste0("2017-12","31"), "%Y-%m%d"), by="month"),"%Y-%m")
+#MONTH_LOW_HIGH
+df_onesided_casualties_per_month <- data.frame(date=MONTH_LOW_HIGH, monthly_onesided_casualties=0)
+
+month_index =1
+sum_casualties = 0
+for(row in 1:nrow(df_onesided_casualties_per_day)) {
+  if(df_onesided_casualties_per_day[row, 'date'] <= as.Date(as.yearmon(MONTH_LOW_HIGH[month_index]))+30) {
+    sum_casualties = sum_casualties + df_onesided_casualties_per_day[row,'onesided_casualties']
+  }
+  else {
+    df_onesided_casualties_per_month[which(df_onesided_casualties_per_month$date == MONTH_LOW_HIGH[month_index]),]$monthly_onesided_casualties = sum_casualties
+    sum_casualties = df_onesided_casualties_per_day[row,'onesided_casualties']
+    month_index = month_index + 1
+  }
+}
+
+df_onesided_casualties_per_month
+
+```
+
+``` {r fig.height = 30, fig.width = 58}
+
+#add overall casualties
+casualties_over_months <- ggplot(df_casualties_per_month, aes(x=date, y=monthly_casualties)) + geom_line(color = "black", size = 4, group =1)+ geom_point(size = 20)
+
+#add state-based casualties
+casualties_over_months <- casualties_over_months + geom_line(data=df_state_casualties_per_month, aes(x=date,y=monthly_state_casualties), color="red", size=4, group=2) + geom_point(data=df_state_casualties_per_month, aes(x=date,y=monthly_state_casualties),group=2, size=20, color="red")
+
+#add non-state-based casualties
+casualties_over_months <- casualties_over_months + geom_line(data=df_nonstate_casualties_per_month, aes(x=date,y=monthly_nonstate_casualties), color="blue", size=4, group=3) + geom_point(data=df_nonstate_casualties_per_month, aes(x=date,y=monthly_nonstate_casualties),group=2, size=20, color="blue")
+
+#add one-sided-based casualties
+casualties_over_months <- casualties_over_months + geom_line(data=df_onesided_casualties_per_month, aes(x=date,y=monthly_onesided_casualties), color="green", size=4, group=4) + geom_point(data=df_onesided_casualties_per_month, aes(x=date,y=monthly_onesided_casualties),group=2, size=20, color="green")
+  
+  
+casualties_over_months <- casualties_over_months + theme(axis.text.x = element_text(size = 40, face = "bold", angle = 60, hjust = 0.5, vjust = 0.5)) + theme(axis.text.x = element_text(size = 40, face = "bold", angle = 60, hjust = 0.5, vjust = 0.5)) + theme(axis.text.y = element_text(size = 40, face = "bold")) + theme(legend.text = element_text(size = 40, face = "bold")) + theme(axis.title.x = element_text(size = 50, face = "bold")) + theme(axis.title.y = element_text(size = 50, face = "bold")) + theme(legend.title = element_text(size = 50, face = "bold")) + theme(axis.ticks = element_line(size = 4))+ theme(axis.ticks.length=unit(0.5, "cm"))
+
+casualties_over_months
+```
+

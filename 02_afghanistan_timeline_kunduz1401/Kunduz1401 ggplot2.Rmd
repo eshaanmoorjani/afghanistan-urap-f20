@@ -1,0 +1,116 @@
+---
+title: "ggplot2 Kunduz1401"
+output: html_notebook
+---
+
+
+```{r library imports}
+library(rgdal)
+library(ggplot2)
+library(geojsonio)
+library(dplyr)
+library(broom)
+library("arules")
+library("arulesViz")
+library(mapproj)
+```
+
+``` {r loading data}
+afghanistan.json <- geojson_read("jsons/district398.json", what="sp")
+k_event_df <- read.csv("data/k_event.csv", header = TRUE)
+  
+k_event_df
+plot(afghanistan.json)
+afghanistan.json@data
+```
+
+
+``` {r}
+afghanistan_fortified <- fortify(afghanistan.json, region = "DISTID")
+map <- ggplot(data = afghanistan_fortified, aes(x = long, y = lat, group = group))
+map + geom_path()
+
+map + 
+  geom_polygon(aes(fill = id)) +
+  coord_fixed(1.3) +
+  guides(fill = FALSE)
+
+```
+
+```{r}
+
+afghanistan_fortified %>% distinct(id) %>% write.csv("data/districts.csv", row.names= FALSE)
+
+```
+
+``` {r,  fig.width = 15}
+
+add_k_to_map <- function(k_days) {
+  k_days_df <- k_event_df[which(k_event_df$visit_day - k_event_df$impact_day == k_days),]
+  print(length(k_days_df))
+  map_districts <- read.csv("data/districts.csv")
+  map_districts$visits = 0
+  for (i in 1:nrow(k_days_df)) {
+    #print(k15_df[i, 'visits'])
+    map_districts$visits[map_districts$id == k_days_df[i, 'destination_district']] <- k_days_df[i, 'visits']
+  }
+  
+  #map_districts
+  afghanistan_fortified_days <- merge(afghanistan_fortified, map_districts, by="id")
+  map <- ggplot(data = afghanistan_fortified_days, aes(x = long, y = lat, group = group))
+
+  title <- paste(k_days, "days following")
+  
+  map + geom_polygon(aes(fill=visits), color='black', size=.1) + scale_fill_gradient(high = "#e34a33", low = "#ffffff", limits=c(0, 3698), guide = "colorbar")  + coord_fixed(1.3) + ggtitle(title) + theme(plot.title = element_text(size=40, face="bold"))
+}
+  
+add_k_to_map(1)
+add_k_to_map(5)
+add_k_to_map(10)
+add_k_to_map(15)
+add_k_to_map(30)
+add_k_to_map(45)
+add_k_to_map(60)
+add_k_to_map(75)
+add_k_to_map(90)
+add_k_to_map(105)
+add_k_to_map(120)
+
+
+```
+
+```{r,  fig.width = 15}
+
+map <- ggplot(data = afghanistan_fortified, aes(x = long, y = lat, group = group))
+
+map + geom_polygon(aes(fill=visits), color='black', size=.1) + scale_fill_gradient(high = "#e34a33", low = "#ffffff", limits=c(0, 3386), guide = "colorbar")  + coord_fixed(1.3)
+
+
+```
+
+
+``` {r}
+
+k_days_df <- k_event_df[which(k_event_df$visit_day - k_event_df$impact_day == 15),]
+for (i in 1:nrow(k_days_df)) {
+  #print(k15_df[i, 'visits'])
+  afghanistan.json@data$visits[afghanistan.json@data$DISTID == k_days_df[i, 'destination_district']] <- k_days_df[i, 'visits']
+}
+afghanistan.json@data
+#plot(afghanistan, col=colors, bg="#A6CAE0", cex.main=3)
+```
+
+
+``` {r}
+afghanistan.json_fortified <- tidy(afghanistan.json, region = "visits")
+afghanistan.json_fortified
+```
+
+``` {r}
+
+ggplot() +
+  geom_polygon(data = afghanistan.json_fortified, aes( x = long, y = lat, group = group), fill="white", color="black") +
+  theme_void() +
+  coord_map()
+
+```

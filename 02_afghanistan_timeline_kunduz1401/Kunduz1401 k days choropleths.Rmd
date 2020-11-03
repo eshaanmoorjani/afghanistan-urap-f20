@@ -1,0 +1,99 @@
+---
+title: "Kunduz1401 K Days Choropleths"
+output: html_notebook
+---
+
+```{r library imports}
+library(stats)
+library(ggplot2)
+library(geojsonio)
+library(dplyr)
+library(grid)
+
+library(RColorBrewer)
+library("arules")
+library("arulesViz")
+
+```
+
+``` {r data+geojson imports}
+afghanistan <- geojson_read("jsons/district398.json", what="sp")
+k_event_df <- read.csv("data/k_event.csv", header = TRUE)
+  
+k_event_df
+plot(afghanistan)
+```
+
+
+``` {r color palette}
+COLOR_BINS = 255
+color_palette <- brewer.pal(9, "Reds")
+color_palette <- colorRampPalette(color_palette)(COLOR_BINS)
+color_palette
+
+```
+``` {r}
+k_days_df <- k_event_df[which(k_event_df$visit_day - k_event_df$impact_day == 15),]
+for (i in 1:nrow(k_days_df)) {
+  #print(k15_df[i, 'visits'])
+  afghanistan@data$visits[afghanistan@data$DISTID == k_days_df[i, 'destination_district']] <- k_days_df[i, 'visits']
+}
+afghanistan@data
+plot(afghanistan, col=colors, bg="#A6CAE0", cex.main=3)
+
+```
+
+
+``` {r add k day to the maps, fig.width = 15}
+afghanistan@data$DISTID = as.numeric(afghanistan@data$DISTID)
+visits <- cut(k_event_df$visits, COLOR_BINS)
+colors <- color_palette[as.numeric(visits)]
+
+add_k_to_map <- function(k_days, afghanistan) {
+  k_days_df <- k_event_df[which(k_event_df$visit_day - k_event_df$impact_day == k_days),]
+  for (i in 1:nrow(k_days_df)) {
+    #print(k15_df[i, 'visits'])
+    afghanistan@data$visits[afghanistan@data$DISTID == k_days_df[i, 'destination_district']] <- k_days_df[i, 'visits']
+  }
+  title = paste(k_days, "Days After", sep=" ")
+  plot(afghanistan, col=colors, bg="#A6CAE0", main=title, cex.main=3)
+}
+
+add_k_to_map(15, afghanistan)
+add_k_to_map(30, afghanistan)
+add_k_to_map(45, afghanistan)
+add_k_to_map(60, afghanistan)
+add_k_to_map(75, afghanistan)
+add_k_to_map(90, afghanistan)
+add_k_to_map(105, afghanistan)
+add_k_to_map(120, afghanistan)
+
+
+# attribute colors to the map
+#visits_per_district <- cut(k15_df@$visits. )
+
+```
+
+``` {r create maps, fig.width = 50}
+
+
+plot_k_map <- function(k_days_map) {
+  plot(k_days_map, col=colors, bg="#A6CAE0")
+  #ggplot() + geom_polygon(data=k_days_map, aes(fill= k_days_map@data$visits)) + theme_void() + coord_map()
+}
+
+plot_k_map(afghanistan)
+
+plot_k_map(k15_map)
+plot_k_map(k30_map)
+plot_k_map(k45_map)
+plot_k_map(k60_map)
+plot_k_map(k75_map)
+plot_k_map(k90_map)
+plot_k_map(k105_map)
+plot_k_map(k120_map)
+
+
+```
+
+
